@@ -7,7 +7,7 @@ public class Escenario {
 
     public Escenario(String nombre) {
         this.nombre = nombre;
-        this.campoDeBatalla = new Elemento[10][10]; //Tamaño fijo de 10x10
+        this.campoDeBatalla = new Elemento[10][10]; 
     }
 
     public String getNombre() {
@@ -62,7 +62,7 @@ public class Escenario {
         return sb.toString();
     }
 
-    //Método para escribir en un archivo de texto
+    
     public static void escribirConfiguracion(String nombreArchivo, List<String> configuracion) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(nombreArchivo))) {
             for (String linea : configuracion) {
@@ -75,7 +75,7 @@ public class Escenario {
         }
     }
 
-    //Método para leer desde un archivo de texto
+    
     public static List<String> leerConfiguracion(String nombreArchivo) {
         List<String> configuracion = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(nombreArchivo))) {
@@ -90,7 +90,7 @@ public class Escenario {
         return configuracion;
     }
 
-    //Método para cargar elementos desde el archivo al escenario
+    
     public void cargarElementos(String nombreArchivo) {
         List<String> configuracion = leerConfiguracion(nombreArchivo);
         for (String linea : configuracion) {
@@ -118,7 +118,7 @@ public class Escenario {
         }
     }
 
-    //Método para guardar el estado actual del escenario
+  
     public void guardarEstadoActual(String nombreArchivo) {
         List<String> configuracion = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
@@ -140,4 +140,5 @@ public class Escenario {
         }
         escribirConfiguracion(nombreArchivo, configuracion);
     }
+
 }
