@@ -1,61 +1,144 @@
-import java.util.ArrayList;
+import java.io.*;
+import java.util.*;
 
 public class Escenario {
     private String nombre;
-    private ArrayList<Elemento> campoDeBatalla;
-    private final int TAMANIO = 10; // 10x10
+    Elemento[][] campoDeBatalla;
 
     public Escenario(String nombre) {
         this.nombre = nombre;
-        this.campoDeBatalla = new ArrayList<>();
+        this.campoDeBatalla = new Elemento[10][10]; 
     }
 
-    public void addElemento(Elemento elemento) {
-        campoDeBatalla.add(elemento);
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void addElemento(Elemento e) {
+        Posicion pos = e.getPosicion();
+        campoDeBatalla[pos.getRenglon()][pos.getColumna()] = e;
     }
 
     public void destruirElementos(Posicion centro, int radio) {
-        System.out.println("Verificando elementos dentro del radio de " + radio + " desde " + centro);
-        for (Elemento e : new ArrayList<>(campoDeBatalla)) {
-            if (e instanceof Destruible) {
-                int dx = Math.abs(e.getPosicion().getRenglon() - centro.getRenglon());
-                int dy = Math.abs(e.getPosicion().getColumna() - centro.getColumna());
-                if (dx <= radio && dy <= radio) {
-                    ((Destruible) e).destruir();
+        ArrayList<Elemento> objetosADestruir = new ArrayList<>();
+
+        for (int i = Math.max(0, centro.getRenglon() - radio);
+             i <= Math.min(9, centro.getRenglon() + radio); i++) {
+            for (int j = Math.max(0, centro.getColumna() - radio);
+                 j <= Math.min(9, centro.getColumna() + radio); j++) {
+
+                Elemento e = campoDeBatalla[i][j];
+                if (e instanceof Destruible) {
+                    objetosADestruir.add(e);
                 }
             }
+        }
+
+        for (Elemento e : objetosADestruir) {
+            System.out.println(((Destruible) e).destruir());
+            campoDeBatalla[e.getPosicion().getRenglon()][e.getPosicion().getColumna()] = null;
         }
     }
 
     @Override
     public String toString() {
-        String[][] matriz = new String[TAMANIO][TAMANIO];
-        for (int i = 0; i < TAMANIO; i++) {
-            for (int j = 0; j < TAMANIO; j++) {
-                matriz[i][j] = "0";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                if (campoDeBatalla[i][j] == null) {
+                    sb.append("0 ");
+                } else if (campoDeBatalla[i][j] instanceof Terricola) {
+                    sb.append("T ");
+                } else if (campoDeBatalla[i][j] instanceof Extraterrestre) {
+                    sb.append("E ");
+                } else if (campoDeBatalla[i][j] instanceof Roca) {
+                    sb.append("R ");
+                } else if (campoDeBatalla[i][j] instanceof Bomba) {
+                    sb.append("B ");
+                }
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+
+    
+    public static void escribirConfiguracion(String nombreArchivo, List<String> configuracion) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(nombreArchivo))) {
+            for (String linea : configuracion) {
+                writer.write(linea);
+                writer.newLine();
+            }
+            System.out.println("Configuración escrita en el archivo: " + nombreArchivo);
+        } catch (IOException e) {
+            System.err.println("Error al escribir en el archivo: " + e.getMessage());
+        }
+    }
+
+    
+    public static List<String> leerConfiguracion(String nombreArchivo) {
+        List<String> configuracion = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(nombreArchivo))) {
+            String linea;
+            while ((linea = reader.readLine()) != null) {
+                configuracion.add(linea);
+            }
+            System.out.println("Configuración leída del archivo: " + nombreArchivo);
+        } catch (IOException e) {
+            System.err.println("Error al leer el archivo: " + e.getMessage());
+        }
+        return configuracion;
+    }
+
+    
+    public void cargarElementos(String nombreArchivo) {
+        List<String> configuracion = leerConfiguracion(nombreArchivo);
+        for (String linea : configuracion) {
+            String[] partes = linea.split(" ");
+            String tipo = partes[0];
+            int renglon = Integer.parseInt(partes[1]);
+            int columna = Integer.parseInt(partes[2]);
+            Posicion posicion = new Posicion(renglon, columna);
+
+            switch (tipo) {
+                case "Roca":
+                    addElemento(new Roca(this, posicion));
+                    break;
+                case "Extraterrestre":
+                    addElemento(new Extraterrestre("Extraterrestre", this, posicion));
+                    break;
+                case "Bomba":
+                    int radio = Integer.parseInt(partes[3]);
+                    addElemento(new Bomba(this, posicion, radio));
+                    break;
+                case "Terricola":
+                    addElemento(new Terricola("Terricola", this, posicion));
+                    break;
             }
         }
-        for (Elemento e : campoDeBatalla) {
-            int r = e.getPosicion().getRenglon();
-            int c = e.getPosicion().getColumna();
+    }
 
-            if (r >= 0 && r < TAMANIO && c >= 0 && c < TAMANIO) {
-                if (e instanceof Terricola) matriz[r][c] = "T";
-                else if (e instanceof Extraterrestre) matriz[r][c] = "E";
-                else if (e instanceof Roca) matriz[r][c] = "R";
-                else if (e instanceof Bomba) matriz[r][c] = "B";
+  
+    public void guardarEstadoActual(String nombreArchivo) {
+        List<String> configuracion = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                Elemento e = campoDeBatalla[i][j];
+                if (e != null) {
+                    if (e instanceof Roca) {
+                        configuracion.add("Roca " + i + " " + j);
+                    } else if (e instanceof Extraterrestre) {
+                        configuracion.add("Extraterrestre " + i + " " + j);
+                    } else if (e instanceof Bomba) {
+                        Bomba bomba = (Bomba) e;
+                        configuracion.add("Bomba " + i + " " + j + " " + bomba.radio);
+                    } else if (e instanceof Terricola) {
+                        configuracion.add("Terricola " + i + " " + j);
+                    }
+                }
             }
         }
-
-        String texto = "";
-
-for (int i = 0; i < TAMANIO; i++) {
-    for (int j = 0; j < TAMANIO; j++) {
-        texto += matriz[i][j] + " ";
+        escribirConfiguracion(nombreArchivo, configuracion);
     }
-    texto += "\n";
-}
 
-return texto;
-    }
 }
